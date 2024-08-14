@@ -7,16 +7,6 @@ const myHeaders = new Headers();
 // the header "Authorization" with idToken string must be attached to pass the api authorization
 myHeaders.append("Authorization", idToken);
 
-// get data from a protected api
-getData(requestUrl, myHeaders)
+fetch(requestUrl, { method: "GET", headers: myHeaders })
     .then((response) => { console.log(response) })
     .catch((e) => { console.log('fetch failed\n', e) });
-
-async function getData(url, headers) {
-    const response = await fetch(url, {
-        method: "GET",
-        headers,
-    });
-
-    return response;
-};
