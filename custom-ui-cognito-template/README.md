@@ -1,6 +1,3 @@
-# ssc-backend-for-frontend
-non credential code share with frontend
-
 1. setup `POOL_DATA` in the "./web-ui-js/custom-ui-cognito-env.js"
 2. install dependency by `npm i`
 3. esbuild the "./web-ui-js/custom-ui-cognito.js" to the public folder:
