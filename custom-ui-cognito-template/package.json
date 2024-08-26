@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.637.0",
     "amazon-cognito-identity-js": "^6.3.12"
   },
   "devDependencies": {

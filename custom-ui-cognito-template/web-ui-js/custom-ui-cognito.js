@@ -1,8 +1,13 @@
 // modified from the template https://catalog.workshops.aws/wyld-pets-cognito/en-US/50-lab2-user-pools-sdk/51-initial-setup
 import { AuthenticationDetails, CognitoUserPool, CognitoUser, CognitoUserAttribute } from 'amazon-cognito-identity-js';
-import { POOL_DATA } from './custom-ui-cognito-env';
+import { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { POOL_DATA, CONFIG } from './custom-ui-cognito-env';
 
 const userPool = new CognitoUserPool(POOL_DATA);
+const userEmailConfirm = {
+    userSub: null,
+    isUserConfirmed: false
+}
 let cognitoUser;
 
 const domEls = {
@@ -64,6 +69,7 @@ const alert = (message, type) => {
     'use strict'
     const signInForm = document.getElementById('sign-in-form');
     const signUpForm = document.getElementById('sign-up-form');
+    const resendCodeForm = document.getElementById('resend-code-btn')
 
     signInForm.addEventListener('submit', event => {
         signInForm.classList.add('was-validated');
@@ -78,6 +84,12 @@ const alert = (message, type) => {
         event.stopPropagation();
         if (signUpForm.checkValidity()) signUp();
     }, false);
+
+    resendCodeForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        await resendCode();
+    })
 })()
 
 /**
@@ -96,6 +108,8 @@ const signUp = () => {
             return;
         }
 
+        userEmailConfirm.userSub = result.userSub;
+
         const confirmationCode = prompt('Please enter confirmation code:');
 
         result.user.confirmRegistration(confirmationCode, true, (err, result) => {
@@ -103,7 +117,8 @@ const signUp = () => {
                 alert(err.message || JSON.stringify(err));
                 return;
             }
-            console.log('call result:', result);
+
+            userEmailConfirm.isUserConfirmed = true;
             alert('Sign Up Successful!', 'success');
 
             // auto signin after sign up
@@ -153,4 +168,46 @@ const signOut = () => {
     domEls.email1.value = '';
     domEls.password1.value = '';
     alert('Signed Out.', 'success');
+}
+
+const resendCode = async () => {
+    if (userEmailConfirm.isUserConfirmed) {
+        alert('this email has code confirmed already', 'danger');
+        return;
+    }
+
+    // if a user closes the page between sign up and code confirm steps
+    // as he comes back, it cause user info lost. solution pending...
+    if (!userEmailConfirm.userSub) {
+        alert('sign up interrupted, admin assistance required', 'danger');
+        return;
+    }
+
+    const command = new ResendConfirmationCodeCommand({ ClientId: POOL_DATA.ClientId, Username: userEmailConfirm.userSub });
+    const client = new CognitoIdentityProviderClient({ region: CONFIG.Region });
+
+    try {
+        await client.send(command);
+    } catch {
+        alert('resend failed', 'danger');
+        return;
+    }
+
+    const confirmationCode = prompt('Code sent.\nPlease enter confirmation code:');
+
+    cognitoUser = new CognitoUser({ Username: userEmailConfirm.userSub, Pool: userPool });
+    cognitoUser.confirmRegistration(confirmationCode, true, function (err, result) {
+        if (err) {
+            alert(err);
+            return;
+        }
+
+        userEmailConfirm.isUserConfirmed = true;
+        alert('Sign Up Successful!', 'success');
+
+        // auto signin after sign up
+        domEls.email1.value = getVal('email');
+        domEls.password1.value = getVal('password');
+        signIn();
+    });
 }
