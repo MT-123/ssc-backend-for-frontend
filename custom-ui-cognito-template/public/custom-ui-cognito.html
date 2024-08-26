@@ -97,7 +97,16 @@
                         <input type="radio" id="roleCoach" name="radioRole" value="coach" />
                         <label for="roleCoach">I am a coach.</label>
                     </div>
-                    <button class="w-50 btn btn-lg btn-primary" type="submit">Sign Up</button>
+                    <button class="w-50 btn btn-lg btn-primary" type="submit">Send Confirm Code</button>
+                </form>
+                <form id="confirm-code-form">
+                    <div class="form-floating">
+                        <input type="text" id="floatingCode" placeholder="Email confirm code" required>
+                    </div>
+                    <button class="w-50 btn btn-lg btn-primary" type="submit">Sign UP</button>
+                </form>
+                <form id="resend-code-btn">
+                    <button class="w-50 btn btn-lg btn-primary" type="submit">Resend Confirm Code</button>
                 </form>
             </div>
             <div class="tab-pane fade" id="nav-sign-in" role="tabpanel" aria-labelledby="nav-sign-in-tab" tabindex="0">
