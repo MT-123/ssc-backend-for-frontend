@@ -16,6 +16,7 @@ const domEls = {
     email1: document.getElementById('floatingEmail1') || {},
     password: document.getElementById('floatingPassword') || {},
     password1: document.getElementById('floatingPassword1') || {},
+    confirmCode: document.getElementById('floatingCode') || {},
     prefix: document.getElementById('floatingPrefix') || {}
 };
 
@@ -70,6 +71,7 @@ const alert = (message, type) => {
     const signInForm = document.getElementById('sign-in-form');
     const signUpForm = document.getElementById('sign-up-form');
     const resendCodeForm = document.getElementById('resend-code-btn')
+    const confirmCodeForm = document.getElementById('confirm-code-form')
 
     signInForm.addEventListener('submit', event => {
         signInForm.classList.add('was-validated');
@@ -84,6 +86,12 @@ const alert = (message, type) => {
         event.stopPropagation();
         if (signUpForm.checkValidity()) signUp();
     }, false);
+
+    confirmCodeForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        await codeRegistration();
+    })
 
     resendCodeForm.addEventListener('submit', async event => {
         event.preventDefault();
@@ -109,23 +117,7 @@ const signUp = () => {
         }
 
         userEmailConfirm.userSub = result.userSub;
-
-        const confirmationCode = prompt('Please enter confirmation code:');
-
-        result.user.confirmRegistration(confirmationCode, true, (err, result) => {
-            if (err) {
-                alert(err.message || JSON.stringify(err));
-                return;
-            }
-
-            userEmailConfirm.isUserConfirmed = true;
-            alert('Sign Up Successful!', 'success');
-
-            // auto signin after sign up
-            domEls.email1.value = getVal('email');
-            domEls.password1.value = getVal('password');
-            signIn();
-        });
+        alert('email confirm code sent');
     });
 }
 
@@ -153,6 +145,9 @@ const signIn = () => {
                 console.log(`Hello ${userName}`);
             };
 
+            // console.log(`idToken\n${idToken}`);
+            // console.log(`accessToken\n${accessToken}`);
+
             alert('Sign In Successful', 'success',);
         },
 
@@ -170,30 +165,21 @@ const signOut = () => {
     alert('Signed Out.', 'success');
 }
 
-const resendCode = async () => {
-    if (userEmailConfirm.isUserConfirmed) {
-        alert('this email has code confirmed already', 'danger');
-        return;
-    }
-
-    // if a user closes the page between sign up and code confirm steps
-    // as he comes back, it cause user info lost. solution pending...
+const codeRegistration = async () => {
+    // user does not sign up email to cognito
     if (!userEmailConfirm.userSub) {
-        alert('sign up interrupted, admin assistance required', 'danger');
+        alert('send confirm code first', 'danger');
         return;
     }
+    // solution pending: if a user closes the page between signUp and codeRegistration steps
+    // as he comes back, it cause user info lost and userEmailConfirm.userSub will also be null
 
-    const command = new ResendConfirmationCodeCommand({ ClientId: POOL_DATA.ClientId, Username: userEmailConfirm.userSub });
-    const client = new CognitoIdentityProviderClient({ region: CONFIG.Region });
+    const confirmationCode = getVal('confirmCode');
 
-    try {
-        await client.send(command);
-    } catch {
-        alert('resend failed', 'danger');
+    if (!confirmationCode) {
+        alert('email confirm code required', 'danger');
         return;
     }
-
-    const confirmationCode = prompt('Code sent.\nPlease enter confirmation code:');
 
     cognitoUser = new CognitoUser({ Username: userEmailConfirm.userSub, Pool: userPool });
     cognitoUser.confirmRegistration(confirmationCode, true, function (err, result) {
@@ -210,4 +196,28 @@ const resendCode = async () => {
         domEls.password1.value = getVal('password');
         signIn();
     });
+}
+
+const resendCode = async () => {
+    if (userEmailConfirm.isUserConfirmed) {
+        alert('this email has code confirmed already', 'danger');
+        return;
+    }
+
+    if (!userEmailConfirm.userSub) {
+        alert('send confirm code first', 'danger');
+        return;
+    }
+
+    const command = new ResendConfirmationCodeCommand({ ClientId: POOL_DATA.ClientId, Username: userEmailConfirm.userSub });
+    const client = new CognitoIdentityProviderClient({ region: CONFIG.Region });
+
+    try {
+        await client.send(command);
+    } catch {
+        alert('resend failed', 'danger');
+        return;
+    }
+
+    alert('email confirm code sent');
 }
