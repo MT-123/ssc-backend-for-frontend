@@ -9,6 +9,7 @@ const userEmailConfirm = {
     isUserConfirmed: false
 }
 let cognitoUser;
+const subscribeCheck = document.getElementById('subscribeCheckbox');
 
 const domEls = {
     name: document.getElementById('floatingName') || {},
@@ -108,6 +109,7 @@ const signUp = () => {
 
     attributeList.push(getAttr(dataFmt('name')));
     attributeList.push(getAttr({ Name: 'custom:role', Value: getRadioValue('radioRole') }));
+    attributeList.push(getAttr({ Name: 'custom:isSubscribed', Value: subscribeCheck.checked ? '1' : '0' }));
 
     userPool.signUp(getVal('email'), getVal('password'), attributeList, null, (err, result) => {
         if (err) {
