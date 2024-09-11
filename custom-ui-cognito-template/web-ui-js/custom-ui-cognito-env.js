@@ -1,6 +1,6 @@
 export const POOL_DATA = {
-    UserPoolId: 'ap-northeast-1_vz578T1Yr',
-    ClientId: '664g905a41j6loenabt1123g6r',
+    UserPoolId: '',
+    ClientId: '',
 };
 
 export const CONFIG = {

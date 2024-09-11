@@ -6,3 +6,4 @@
 ```
 4. upload the .js and .html files in public folder to a static website hosting, for example cloudfront + s3
 5. for access to the protected api, check template `access-protected-template.js`
+6. Google sign up/in ongoing
