@@ -7,6 +7,10 @@ const myHeaders = new Headers();
 // the header "Authorization" with idToken string must be attached to pass the api authorization
 myHeaders.append("Authorization", idToken);
 
+// (for delete user) the header "accessToken" with accessToken string must be attached to pass the api authorization
+// const accessToken = "";
+// myHeaders.append("accessToken", accessToken);
+
 fetch(requestUrl, { method: "GET", headers: myHeaders })
     .then((response) => { console.log(response) })
     .catch((e) => { console.log('fetch failed\n', e) });

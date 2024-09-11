@@ -1,7 +1,7 @@
 // modified from the template https://catalog.workshops.aws/wyld-pets-cognito/en-US/50-lab2-user-pools-sdk/51-initial-setup
 import { AuthenticationDetails, CognitoUserPool, CognitoUser, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { POOL_DATA, CONFIG } from './custom-ui-cognito-env';
+import { POOL_DATA, CONFIG, IDPGOOGLE } from './custom-ui-cognito-env';
 
 const userPool = new CognitoUserPool(POOL_DATA);
 const userEmailConfirm = {
@@ -73,6 +73,8 @@ const alert = (message, type) => {
     const signUpForm = document.getElementById('sign-up-form');
     const resendCodeForm = document.getElementById('resend-code-btn')
     const confirmCodeForm = document.getElementById('confirm-code-form')
+    const signUpGoogleButton = document.getElementById('sign-up-google-btn')
+    const signInGoogleButton = document.getElementById('sign-in-google-btn')
 
     signInForm.addEventListener('submit', event => {
         signInForm.classList.add('was-validated');
@@ -98,6 +100,16 @@ const alert = (message, type) => {
         event.preventDefault();
         event.stopPropagation();
         await resendCode();
+    })
+
+    signUpGoogleButton.addEventListener('click', () => {
+        console.log(IDPGOOGLE.Link)
+        window.location.href = IDPGOOGLE.Link;
+    })
+
+    signInGoogleButton.addEventListener('click', () => {
+        console.log(IDPGOOGLE.Link)
+        window.location.href = IDPGOOGLE.Link;
     })
 })()
 
