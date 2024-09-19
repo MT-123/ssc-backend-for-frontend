@@ -1,12 +1,14 @@
+import { TOKEN_CONFIG } from './code-token-exchange-env';
+
 class AuthService {
     constructor() {
-        this.authEndpoint = 'https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/authorize';
-        this.tokenEndpoint = 'https://mydomain.auth.us-east-1.amazoncognito.com/oauth2/token';
-        this.clientId = 'your-client-id';
-        this.redirectUri = 'https://your-app.com/callback'; // url for code-token exchange and must be pre-registered the URI with a client
+        this.authEndpoint = TOKEN_CONFIG.AUTH_ENDPOINT;
+        this.tokenEndpoint = TOKEN_CONFIG.TOKEN_ENDPOINT;
+        this.clientId = TOKEN_CONFIG.CLIENT_ID;
+        this.redirectUri = TOKEN_CONFIG.REDIRECT_URI; // url for code-token exchange and must be pre-registered the URI with the client
         this.codeVerifier = '';
         this.state = ''; // the string format base64
-        this.scope = 'openid profile email aws.cognito.signin.user.admin'; // each scope must be separated with a space
+        this.scope = TOKEN_CONFIG.SCOPE; // each scope must be separated with a space
         this.identity_provider = 'Google';
     }
 
