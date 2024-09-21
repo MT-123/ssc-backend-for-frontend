@@ -1,15 +1,7 @@
 // modified from the template https://catalog.workshops.aws/wyld-pets-cognito/en-US/50-lab2-user-pools-sdk/51-initial-setup
 import { AuthenticationDetails, CognitoUserPool, CognitoUser, CognitoUserAttribute } from 'amazon-cognito-identity-js';
 import { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } from "@aws-sdk/client-cognito-identity-provider";
-import { POOL_DATA, CONFIG } from './custom-ui-cognito-env';
-
-const userPool = new CognitoUserPool(POOL_DATA);
-const userEmailConfirm = {
-    userSub: null,
-    isUserConfirmed: false
-}
-let cognitoUser;
-const subscribeCheck = document.getElementById('subscribeCheckbox');
+import { poolData, idpGoogle } from './custom-ui-cognito-env';
 
 const domEls = {
     name: document.getElementById('floatingName') || {},
@@ -20,8 +12,18 @@ const domEls = {
     confirmCode: document.getElementById('floatingCode') || {},
     prefix: document.getElementById('floatingPrefix') || {}
 };
+const subscribeCheck = document.getElementById('subscribeCheckbox');
+const userPool = new CognitoUserPool({
+    UserPoolId: poolData.userPoolId,
+    ClientId: poolData.clientId
+});
+const userEmailConfirm = {
+    userSub: null,
+    isUserConfirmed: false
+};
+let cognitoUser;
 
-const parseJwt = token => {
+const parseJwt = (token) => {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace('-', '+').replace('_', '/');
     return JSON.parse(window.atob(base64));
@@ -64,6 +66,15 @@ const alert = (message, type) => {
     alertPlaceholder.append(wrapper);
 }
 
+// for code token exchange when redirect from google sign in
+const urlParams = new URLSearchParams(window.location.search);
+const receivedCode = urlParams.get('code');
+const receivedState = urlParams.get('state');
+
+window.addEventListener('load', async () => {
+    await codeTokenExchangeIdpGoogle();
+}, { once: true });
+
 /**
  * Configure some listeners when the DOM is ready
  */
@@ -73,37 +84,50 @@ const alert = (message, type) => {
     const signUpForm = document.getElementById('sign-up-form');
     const resendCodeForm = document.getElementById('resend-code-btn')
     const confirmCodeForm = document.getElementById('confirm-code-form')
+    const signUpGoogleButton = document.getElementById('sign-up-google-btn')
+    const signInGoogleButton = document.getElementById('sign-in-google-btn')
 
-    signInForm.addEventListener('submit', event => {
+    signInForm.addEventListener('submit', (event) => {
         signInForm.classList.add('was-validated');
         event.preventDefault();
         event.stopPropagation();
         if (signInForm.checkValidity()) (event.submitter.innerText === 'Sign In') ? signIn() : signOut();
     }, false);
 
-    signUpForm.addEventListener('submit', event => {
+    signUpForm.addEventListener('submit', (event) => {
         signUpForm.classList.add('was-validated');
         event.preventDefault();
         event.stopPropagation();
         if (signUpForm.checkValidity()) signUp();
     }, false);
 
-    confirmCodeForm.addEventListener('submit', async event => {
+    confirmCodeForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         event.stopPropagation();
         await codeRegistration();
     })
 
-    resendCodeForm.addEventListener('submit', async event => {
+    resendCodeForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         event.stopPropagation();
         await resendCode();
     })
+
+    // sign up or sign in with Google
+    signUpGoogleButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await initiateGoogleLogin();
+    })
+
+    signInGoogleButton.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await initiateGoogleLogin();
+    })
 })()
 
-/**
- * Add Sign Up
- */
+// local sign up
 const signUp = () => {
     const attributeList = [];
 
@@ -123,6 +147,7 @@ const signUp = () => {
     });
 }
 
+// local sign in
 const signIn = () => {
     const authenticationDetails = new AuthenticationDetails(
         { Username: getVal('email1'), Password: getVal('password1') }
@@ -132,20 +157,20 @@ const signIn = () => {
     cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: (result) => {
 
-            // please keep tokens safe
-            // idToken is required for the access to a protected api
+            // please keep tokens at a safe place
             const idToken = result.getIdToken().getJwtToken();
             const accessToken = result.getAccessToken().getJwtToken();
+            const refreshToken = result.getRefreshToken().getToken();
 
-            const parsedIdTokenPayload = parseJwt(idToken);
-            const userRole = parsedIdTokenPayload['custom:role'];
-            const userName = parsedIdTokenPayload['name'];
+            // const parsedIdTokenPayload = parseJwt(idToken);
+            // const userRole = parsedIdTokenPayload['custom:role'];
+            // const userName = parsedIdTokenPayload['name'];
 
-            if (userRole === 'coach') {
-                console.log(`Hello coach ${userName}`);
-            } else {
-                console.log(`Hello ${userName}`);
-            };
+            // if (userRole === 'coach') {
+            //     console.log(`Hello coach ${userName}`);
+            // } else {
+            //     console.log(`Hello ${userName}`);
+            // };
 
             // console.log(`idToken\n${idToken}`);
             // console.log(`accessToken\n${accessToken}`);
@@ -211,15 +236,146 @@ const resendCode = async () => {
         return;
     }
 
-    const command = new ResendConfirmationCodeCommand({ ClientId: POOL_DATA.ClientId, Username: userEmailConfirm.userSub });
-    const client = new CognitoIdentityProviderClient({ region: CONFIG.Region });
+    const command = new ResendConfirmationCodeCommand({ ClientId: poolData.clientId, Username: userEmailConfirm.userSub });
+    const client = new CognitoIdentityProviderClient({ region: poolData.region }); // region is required
 
     try {
         await client.send(command);
-    } catch {
+    } catch (e) {
+        console.error(e);
         alert('resend failed', 'danger');
         return;
     }
 
     alert('email confirm code sent');
+}
+
+// sign in with google
+const initiateGoogleLogin = async () => {
+    const codeVerifier = generateRandomString();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    const state = generateRandomString(); // the state should be encoded by base64
+
+    // Store codeVerifier and state
+    sessionStorage.setItem('codeVerifier', codeVerifier);
+    sessionStorage.setItem('state', state);
+
+    const authUrl = new URL(`${poolData.domian}/oauth2/authorize`);
+    authUrl.searchParams.append('response_type', 'code'); // Must be 'code' or 'token'
+    authUrl.searchParams.append('client_id', poolData.clientId);
+    authUrl.searchParams.append('redirect_uri', idpGoogle.redirectUri);
+    // redirect url for code-token exchange and must be pre-registered the URI with the client
+    authUrl.searchParams.append('state', state);
+    authUrl.searchParams.append('scope', idpGoogle.scope); // each scope must be separated with a space
+    authUrl.searchParams.append('code_challenge_method', 'S256'); // Cognito only support S256
+    authUrl.searchParams.append('code_challenge', codeChallenge);
+    authUrl.searchParams.append('identity_provider', idpGoogle.idp);
+
+    window.location.href = authUrl.toString();
+}
+
+const generateRandomString = () => {
+    const arrayU32 = new Uint32Array(28 / 2); // string length is 28
+    window.crypto.getRandomValues(arrayU32);
+    const randomHexString = Array.from(arrayU32, (dec) => {
+        return ('0' + dec.toString(16)).slice(-2)
+    }).join('');
+    return randomHexString;
+}
+
+const generateCodeChallenge = async (verifier) => {
+    const hashed = await sha256(verifier);
+    const base64encoded = base64urlencode(hashed);
+    return base64encoded;
+}
+
+const sha256 = (plain) => { // returns promise ArrayBuffer
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    return window.crypto.subtle.digest('SHA-256', data);
+}
+
+const base64urlencode = (a) => {
+    // Convert the ArrayBuffer to string using Uint8 array.
+    // btoa takes chars from 0-255 and base64 encodes.
+    // Then convert the base64 encoded to base64url encoded.
+    // (replace + with -, replace / with _, trim trailing =)
+    return btoa(String.fromCharCode.apply(null, new Uint8Array(a)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+
+const codeTokenExchangeIdpGoogle = async () => {
+    if (receivedCode && receivedState) {
+        try {
+            const tokens = await getTokenByPKCE(receivedCode, receivedState);
+
+            // store tokens at browser
+            // sessionStorage.setItem('access_token', tokens.access_token);
+            // sessionStorage.setItem('refresh_token', tokens.refresh_token);
+            // sessionStorage.setItem('id_token', tokens.id_token);
+
+            // please keep tokens at a safe place
+            const idToken = tokens.id_token;
+            const accessToken = tokens.access_token;
+            const refreshToken = tokens.refresh_token;
+
+            // const parsedIdTokenPayload = parseJwt(idToken);
+            // const userRole = parsedIdTokenPayload['custom:role'];
+            // const userName = parsedIdTokenPayload['name'];
+
+            // if (userRole === 'coach') {
+            //     console.log(`Hello coach ${userName}`);
+            // } else {
+            //     console.log(`Hello ${userName}`);
+            // };
+
+            // console.log(`idToken\n${idToken}`);
+            // console.log(`accessToken\n${accessToken}`);
+
+            alert('Sign In with Google Successful', 'success',);
+
+        } catch (error) {
+            console.error('Login failed', error);
+        }
+    }
+    return;
+}
+
+const getTokenByPKCE = async (receivedCode, receivedState) => {
+    // Retrieve stored codeVerifier and state
+    const codeVerifier = sessionStorage.getItem('codeVerifier');
+    const originalState = sessionStorage.getItem('state');
+
+    // Clear stored values
+    sessionStorage.removeItem('codeVerifier');
+    sessionStorage.removeItem('state');
+
+    if (!codeVerifier || !originalState) {
+        throw new Error('Missing state or code verifier');
+    }
+
+    if (receivedState !== originalState) {
+        throw new Error('Invalid state parameter');
+    }
+
+    const tokenResponse = await fetch(`${poolData.domian}/oauth2/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: poolData.clientId,
+            code: receivedCode,
+            code_verifier: codeVerifier,
+            redirect_uri: idpGoogle.redirectUri,
+        }),
+    });
+
+    if (!tokenResponse.ok) {
+        throw new Error('Failed to exchange code for token');
+    }
+
+    const tokens = await tokenResponse.json();
+
+    return tokens;
 }
