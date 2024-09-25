@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.658.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0"
+  }
+}
