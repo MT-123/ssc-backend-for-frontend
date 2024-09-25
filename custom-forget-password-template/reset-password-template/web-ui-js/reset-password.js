@@ -1,9 +1,14 @@
 import { CognitoIdentityProviderClient, ConfirmForgotPasswordCommand } from "@aws-sdk/client-cognito-identity-provider";
 import { configure } from './reset-password-env';
 
-// the lambda function redirects browser to this page with search param 'sub'
+// the user is redirected to this page by lambda function with search param 'sub'
+
 const urlParams = new URLSearchParams(window.location.search);
 const receivedSub = urlParams.get('sub');
+
+if (!receivedSub) {
+    console.error("sub is not found!")
+}
 
 /**
  * Configure some listeners when the DOM is ready
