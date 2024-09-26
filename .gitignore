@@ -35,4 +35,4 @@ coverage/
 Thumbs.db
 
 # build files
-custom-ui-cognito.js
+**/public/*.js
