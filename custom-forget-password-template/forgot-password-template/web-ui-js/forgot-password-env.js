@@ -1,3 +1,5 @@
 export const configure = {
-    forgotPasswordHandleURL: 'https://'
+    getSubURL: '',
+    clientId: '',
+    region: 'ap-northeast-1'
 };
