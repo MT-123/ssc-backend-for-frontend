@@ -4,5 +4,5 @@ There are 2 steps for forgot password process
 
 build command
 ```
-./node_modules/esbuild/bin/esbuild ./web-ui-js/FILE_NAME.js --bundle --minify --sourcemap --define:global=window --target=chrome90,firefox90,safari15 > ./public/FILE_NAME.js
+./node_modules/esbuild/bin/esbuild ./web-ui-js/forgot-password.js --bundle --minify --sourcemap --define:global=window --target=chrome90,firefox90,safari15 > ./public/forgot-password.js
 ```
