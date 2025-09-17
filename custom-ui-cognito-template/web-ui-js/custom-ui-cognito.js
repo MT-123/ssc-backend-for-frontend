@@ -4,7 +4,6 @@ import { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } from "@a
 import { poolData, idpGoogle } from './custom-ui-cognito-env';
 
 const domEls = {
-    name: document.getElementById('floatingName') || {},
     email: document.getElementById('floatingEmail') || {},
     email1: document.getElementById('floatingEmail1') || {},
     password: document.getElementById('floatingPassword') || {},
@@ -131,7 +130,6 @@ window.addEventListener('load', async () => {
 const signUp = () => {
     const attributeList = [];
 
-    attributeList.push(getAttr(dataFmt('name')));
     attributeList.push(getAttr({ Name: 'custom:role', Value: getRadioValue('radioRole') }));
     attributeList.push(getAttr({ Name: 'custom:isSubscribed', Value: subscribeCheck.checked ? '1' : '0' }));
 
@@ -162,18 +160,14 @@ const signIn = () => {
             const accessToken = result.getAccessToken().getJwtToken();
             const refreshToken = result.getRefreshToken().getToken();
 
-            // const parsedIdTokenPayload = parseJwt(idToken);
-            // const userRole = parsedIdTokenPayload['custom:role'];
-            // const userName = parsedIdTokenPayload['name'];
+            const parsedIdTokenPayload = parseJwt(idToken);
+            const userRole = parsedIdTokenPayload['custom:role'];
+            const userSub = parsedIdTokenPayload['sub'];
 
-            // if (userRole === 'coach') {
-            //     console.log(`Hello coach ${userName}`);
-            // } else {
-            //     console.log(`Hello ${userName}`);
-            // };
-
-            // console.log(`idToken\n${idToken}`);
-            // console.log(`accessToken\n${accessToken}`);
+            // comment out following console.log for safety
+            console.log(`sub\n${userSub}`);
+            console.log(`idToken\n${idToken}`);
+            console.log(`accessToken\n${accessToken}`);
 
             alert('Sign In Successful', 'success',);
         },
@@ -320,18 +314,14 @@ const codeTokenExchangeIdpGoogle = async () => {
             const accessToken = tokens.access_token;
             const refreshToken = tokens.refresh_token;
 
-            // const parsedIdTokenPayload = parseJwt(idToken);
-            // const userRole = parsedIdTokenPayload['custom:role'];
-            // const userName = parsedIdTokenPayload['name'];
+            const parsedIdTokenPayload = parseJwt(idToken);
+            const userRole = parsedIdTokenPayload['custom:role'];
+            const userSub = parsedIdTokenPayload['sub'];
 
-            // if (userRole === 'coach') {
-            //     console.log(`Hello coach ${userName}`);
-            // } else {
-            //     console.log(`Hello ${userName}`);
-            // };
-
-            // console.log(`idToken\n${idToken}`);
-            // console.log(`accessToken\n${accessToken}`);
+            // comment out following console.log for safety
+            console.log(`sub\n${userSub}`);
+            console.log(`idToken\n${idToken}`);
+            console.log(`accessToken\n${accessToken}`);
 
             alert('Sign In with Google Successful', 'success',);
 
